@@ -1,1 +1,82 @@
-dsfdsf
+{
+# Sync address-list to hotspot ip-binding
+#
+# V2
+#
+# Based on http://wiki.mikrotik.com/wiki/Sync_Address_List_with_DNS_Cache
+# Based on https://github.com/sumonchai/yutup/blob/master/yutup-mikrotik.rsc
+#
+# 2015/08/24
+# by sumonchai <sumonchai@gmail.com>
+#
+# Tested on ROS v6.29 (CRS125-24G)
+#
+:global search;
+:global Names;
+
+# REGEX match
+#:local search ""
+# Define Arrays
+:local IPs ""
+#:local Names ""
+# Reset Arrays
+:set IPs ""
+#:set Names ""
+
+/ip firewall address-list {
+    :local name; :local com; :local data
+    :foreach rule in=[print detail as-value where ((list~$search) !disabled)] do={
+        :put $rule
+        :set name ""; :set com ""; :set data ""
+        :local num 0
+        :foreach item in=$rule do={
+            :if ($num = 2) do={ :set com $item }
+            :if ($num = 4) do={ :set name $item }
+            :if ($num = 1) do={ :set data $item }
+            :set num ($num + 1)
+        }
+        :put ($name . $data . $com)
+        :set IPs ($IPs . $data . ",")
+        #:set Names ($Names . $name . ",")
+        :delay delay-time=10ms
+    }
+}
+:put $IPs
+:put $Names
+:put ("Address-list search found " . [:len [:toarray $IPs]])
+:put ("Name Address-list search found " . [:len [:toarray $Names]])
+
+#:set $Names "AUTOLIST"
+#:set $IPs (172.16.7.2,172.16.7.1,)
+:put ("address-list search found " . [:len [:toarray $IPs]])
+/ip hotspot ip-binding {
+    :local findex; :local listaddr; :local IPsFound ""
+    :put ("Searching binding list ...")
+    :foreach l in=[find comment="$Names"] do={
+        :set listaddr [get $l address]
+        :put ("AUTOLIST: " . $listaddr)
+        :put $IPs
+        :if ([:len [:find [:toarray $IPs] [:toip $listaddr]]] = 0) do={
+            :put ("   " . $IPs .":" . $listaddr . " not found in search, removing...")
+            remove $l
+        } else={
+            :put ($IPs . ":" . $listaddr . " found address in IPs \r\n")
+            :set IPsFound ($IPsFound . $listaddr . ",")
+            :put ("IPsFound " . $IPsFound )
+        }
+    }
+# Add remaining records to address list
+    :set findex 0
+    :foreach ip in=[:toarray $IPs] do={
+    #:put $IPs
+    #:put ("ip " . $ip)
+       :if ([:len [:find [:toarray $IPsFound] [:toip $ip]]] = 0) do={
+         :put ("   Adding address " . $ip)
+          add address=[:toip $ip] comment=$Names disabled=no type=bypassed
+       }
+       :set findex ($findex + 1)
+       #:put $findex
+    }
+}
+}
+
