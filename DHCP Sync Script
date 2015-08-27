@@ -1,0 +1,16 @@
+{
+# Run Script Sync
+# 2015/08/26
+# by sumonchai <sumonchai@gmail.com>
+#
+# Tested on ROS v6.29 (CRS125-24G)
+  /system script {
+    :local listname;
+    :log info ("Running ...Sync");
+    :foreach r in=[find (name~"Sync_")] do={
+      :set listname [get $r name];
+      #:put $listname;
+      run $listname
+    }
+  }
+}
