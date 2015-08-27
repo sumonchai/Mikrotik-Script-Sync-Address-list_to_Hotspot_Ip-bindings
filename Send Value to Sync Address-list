@@ -1,0 +1,5 @@
+{
+:global search "^--Mobiles";
+:global Names "Mobiles"
+/system script run SYNC_ADDR_LIST_IP-BINDING;
+}
